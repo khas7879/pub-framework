@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 using CJC.Framework.Rule.Base;
 
@@ -43,6 +44,13 @@ namespace CJC.Framework.Rule
 				target.UnRigisterTimer(timer);
 				TimerDic.Remove(this);
 			}
+		}
+
+		protected override bool ExportAttributes(XmlData data)
+		{
+			if (!ExportAttribute(data, ERuleKey.TriggerCount)) return false;
+			if (!ExportAttribute(data, ERuleKey.TimerTime)) return false;
+			return true;
 		}
 	}
 }

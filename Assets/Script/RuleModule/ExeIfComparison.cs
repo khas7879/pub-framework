@@ -15,6 +15,7 @@ namespace CJC.Framework.Rule
 			float param1 = ToolParser.FloatParse(Attributes[ERuleKey.Param1]);
 			float param2 = ToolParser.FloatParse(Attributes[ERuleKey.Param2]);
 			ECompareSymbol symbol = (ECompareSymbol)Enum.Parse(typeof(ECompareSymbol), Attributes[ERuleKey.CompareSymbol]);
+
 			if (Compare(symbol, param1, param2))
 				DoRoute(target, ERuleKey.RouteIf);
 			else
@@ -39,6 +40,14 @@ namespace CJC.Framework.Rule
 					return param1 >= param2;
 			}
 			return false;
+		}
+
+		protected override bool ExportAttributes(XmlData data)
+		{
+			if (!ExportAttribute(data, ERuleKey.Param1)) return false;
+			if (!ExportAttribute(data, ERuleKey.Param2)) return false;
+			if (!ExportAttribute(data, ERuleKey.CompareSymbol)) return false;
+			return true;
 		}
 	}
 

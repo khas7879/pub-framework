@@ -13,7 +13,7 @@ namespace CJC.Framework.Rule
 
 			RuleRepertory = new Dictionary<int, CRule>();
 
-			foreach (var ruleData in data.Childs.Values)
+			foreach (var ruleData in data.Childs)
 			{
 				CRule rule = new CRule(ruleData);
 				RuleRepertory.Add(rule.RuleID, rule);

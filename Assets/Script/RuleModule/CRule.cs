@@ -7,16 +7,32 @@ namespace CJC.Framework.Rule.Base
 {
 	public class CRule
 	{
-		public readonly int RuleID;
+		public int RuleID { get; private set; }
 		public readonly Dictionary<int, RuleExcuter> EnteranceExcuters; 
+
+#if UNITY_EDITOR
+		public CRule(int id)
+		{
+			RuleID = id;
+			EnteranceExcuters = new Dictionary<int, RuleExcuter>();
+		}
+
+		public void SetID(int id)
+		{
+			RuleID = id;
+		}
+#endif
 
 		public CRule(XmlData data)
 		{
 			RuleID = ToolParser.IntParse(data.GetAttribute(ERuleKey.ID));
-			XmlData main = data.Childs[ERuleKey.Main];
+			XmlData main = data.SearchChild( (XmlData _data)=> { return ERuleKey.Main.Equals(_data.Node); });
+
+			if (null == main)
+				return;
 
 			EnteranceExcuters = new Dictionary<int, RuleExcuter>();
-			foreach (var exeData in main.Childs.Values)
+			foreach (var exeData in main.Childs)
 			{
 				Type type = Type.GetType("CJC.Framework.Rule." + exeData.Node);
 				RuleExcuter branch = Activator.CreateInstance(type) as RuleExcuter;
