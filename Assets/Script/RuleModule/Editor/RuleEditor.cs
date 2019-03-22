@@ -18,8 +18,6 @@ public partial class RuleEditor : EditorWindow
 		window.InitData();
 	}
 
-	private static List<CRule> mRules;
-
 	void OnGUI()
 	{
 		EditorGUILayout.BeginHorizontal();
@@ -31,33 +29,21 @@ public partial class RuleEditor : EditorWindow
 			UpdateEvent();
 	}
 
-	private void InitData()
-	{
-		mRules = new List<CRule>(RuleManager.Instance.RuleRepertory.Values);
-		InitPrinter();
-	}
-
-	private void DeleteRule(CRule rule)
-	{
-		DeleteRuleObject(rule);
-		mRules.Remove(rule);
-	}
 
 	private float GetCutoffLineX() { return position.width * 0.2f; }
 
 	private bool CheckInEditorWindow()
 	{
 		Vector2 mousePosition = Event.current.mousePosition;
-		return mouseOverWindow != this && mousePosition.x >= GetCutoffLineX();
+		return mouseOverWindow == this && mousePosition.x >= GetCutoffLineX();
 	}
 
-	private CRule mSelectedRule;
 	private void ShowSelected()
 	{
-		if (null == mSelectedRule)
+		if (null == SelectedRuleObject)
 			return;
 
-		PrintRule(mSelectedRule);
+		PrintRule(SelectedRuleObject);
 	}
 
 	#region 显示规则列表
@@ -95,17 +81,17 @@ public partial class RuleEditor : EditorWindow
 	{
 		EditorGUILayout.BeginVertical(GUILayout.Width(GetCutoffLineX()));
 
-		if (null != mRules)
+		if (null != mRuleList)
 		{
 			mScrollViewPosition = EditorGUILayout.BeginScrollView(mScrollViewPosition);
-			foreach (var rule in mRules)
+			foreach (var ruleObject in mRuleList)
 			{
-				bool isSelected = rule.Equals(mSelectedRule);
+				bool isSelected = ruleObject.Equals(SelectedRuleObject);
 				GUIStyle style = isSelected ? mRuleListSelectedItemStyle : mRuleListItemStyle;
 
-				if (GUILayout.Button(rule.RuleID.ToString(), style))
+				if (GUILayout.Button(ruleObject.RuleHost.RuleID.ToString(), style))
 				{
-					mSelectedRule = rule;
+					SelectRule(ruleObject);
 				}
 			}
 			EditorGUILayout.EndScrollView();
@@ -113,82 +99,24 @@ public partial class RuleEditor : EditorWindow
 
 		if(GUILayout.Button("Add"))
 		{
-			CreateNewRule();
+			CreateNew(0);
 		}
 		if (GUILayout.Button("Sort"))
 		{
 			SortRuleList();
 		}
-		if(GUILayout.Button("Export"))
+		if(GUILayout.Button("SaveAll"))
 		{
-			Export();
+			SaveAllRuleObject(null);
+		}
+		if(GUILayout.Button("ExportAll"))
+		{
+			OutputAllRule(null);
 		}
 		EditorGUILayout.EndVertical();
-	}
 
-	private void CreateNewRule()
-	{
-		CRule rule = new CRule(0);
-		AddRuleObject(rule);
-		mRules.Add(rule);
-	}
-
-
-	private void SortRuleList()
-	{
-		mRules.Sort(delegate (CRule rule1, CRule rule2)
-			{
-				int result = rule1.RuleID <= rule2.RuleID ? 0 : 1;
-				return result;
-			});
+		DeleteRuleObject();
 	}
 	#endregion
 
-	#region 导出规则文件
-	private const string RuleFile = "config/ruleconfig.xml";
-	private void Export()
-	{
-		XmlData data;
-		if (!TransformRuleList(out data))
-		{
-			EditorUtility.DisplayDialog(@"提示！", @"规则文件导出失败！", "Ok");
-			return;
-		}
-		XmlTool.ExportFile(RuleFile, data);
-		EditorUtility.DisplayDialog(@"提示！", @"规则文件导出成功！", "Ok");
-	}
-
-	private bool TransformRuleList(out XmlData data)
-	{
-		data = new XmlData();
-
-		foreach (var rule in mRules)
-		{
-			XmlData ruleData = new XmlData();
-			ruleData.AddAttribute(ERuleKey.ID, rule.RuleID);
-
-			foreach (var executer in rule.EnteranceExcuters.Values)
-			{
-				XmlData executerData;
-				if (!TransformExecuter2XmlData(executer, out executerData))
-					return false;
-
-				ruleData.AddChild(executerData);
-			}
-			data.AddChild(ruleData);
-		}
-		return true;
-	}
-
-	private bool TransformExecuter2XmlData(RuleExcuter executer, out XmlData data)
-	{
-		data = new XmlData();
-		data.SetNodeName(executer.GetType());
-
-		if (!executer.Export(data))
-			return false;
-
-		return true;
-	}
-	#endregion
 }

@@ -7,7 +7,6 @@ namespace CJC.Framework.IO
 {
 	public class XmlTool
 	{
-		private const string Root = "root";
 		public static XmlData LoadFile(string fileURL)
 		{
 			string url = Application.dataPath + "/" + fileURL;
@@ -47,9 +46,57 @@ namespace CJC.Framework.IO
 		}
 
 #if UNITY_EDITOR
+		private const string Root = "root";
+		private const string Node = "node";
+
+		private static string GetRealPath(string url) { return Application.dataPath + "/" + url; }
+
+		public static XmlData GetXmlData(string url)
+		{
+			url = GetRealPath(url);
+			XmlDocument doc = new XmlDocument();
+			doc.Load(url);
+			if (null == doc)
+				return null;
+
+			XmlData data = new XmlData();
+			XmlNode node = doc.DocumentElement;
+			ImportXmlData(node, ref data);
+			return data;
+		}
+
+
+		private static void ImportXmlData(XmlNode node, ref XmlData data)
+		{
+			data.SetNodeName(node.Name);
+			var attributes = node.Attributes;
+			if(null != attributes)
+			{
+				int attriCount = attributes.Count;
+				for (int idx = 0; idx < attriCount; ++idx)
+				{
+					var attribute = attributes[idx];
+					data.AddAttribute(attribute.Name, attribute.Value);
+				}
+			}
+
+			var childNodes = node.ChildNodes;
+			if (null == childNodes)
+				return;
+
+			int nodeCount = childNodes.Count;
+			for (int idx = 0; idx < nodeCount; ++idx)
+			{
+				var childNode = childNodes.Item(idx);
+				XmlData childData = new XmlData();
+				ImportXmlData(childNode, ref childData);
+				data.AddChild(childData);
+			}
+		}
+
 		public static void ExportFile(string url, XmlData data)
 		{
-			url = Application.dataPath + "/" + url;
+			url = GetRealPath(url);
 
 			XmlDocument doc = new XmlDocument();
 			doc.AppendChild(doc.CreateXmlDeclaration("1.0", "utf-8", ""));
@@ -57,31 +104,92 @@ namespace CJC.Framework.IO
 			if (string.IsNullOrEmpty(data.Node))
 				data.SetNodeName(Root);
 
-			XmlElement root = ExportData(doc, data);
+			XmlElement root = AddXmlData(doc, data);
 			doc.AppendChild(root);
 			doc.Save(url);
 		}
 
-		private static XmlElement ExportData(XmlDocument doc, XmlData data)
+		/// <summary>
+		/// 添加一条Xmldata
+		/// </summary>
+		/// <param name="doc"></param>
+		/// <param name="data"></param>
+		/// <returns>添加的那条Element</returns>
+		private static XmlElement AddXmlData(XmlDocument doc, XmlData data)
 		{
-			string nodeName = string.IsNullOrEmpty(data.Node) ? "node" : data.Node;
+			string nodeName = string.IsNullOrEmpty(data.Node) ? Node : data.Node;
 			XmlElement element = doc.CreateElement(nodeName);
-			if(null != data.Attributes)
+			ExportXmlData(doc, element, data);
+			return element;
+		}
+
+		public static bool ReplaceXmlData(string url, IXmlDataSerilizer serilizer, string xpath = null)
+		{
+			XmlData data = new XmlData();
+			if (!serilizer.XmlSerilize(ref data))
+				return false;
+
+			return ReplaceXmlData(url, data, xpath);
+		}
+
+		/// <summary>
+		/// 仅支持在root节点下修改一条数据
+		/// </summary>
+		/// <param name="url"></param>
+		/// <param name="data"></param>
+		/// <param name="xpath"></param>
+		/// <returns></returns>
+		public static bool ReplaceXmlData(string url, XmlData data, string xpath = null)
+		{
+			url = GetRealPath(url);
+
+			XmlDocument doc = new XmlDocument();
+			doc.Load(url);
+
+			if (null == doc)
+				return false;
+
+			XmlNode root = doc.DocumentElement;
+			XmlNode replacedNode = string.IsNullOrEmpty(xpath) ? null : doc.SelectSingleNode(xpath);
+			XmlElement element = AddXmlData(doc, data);
+
+			if(null != replacedNode)
+				root.ReplaceChild(element, replacedNode);
+			else
+				root.AppendChild(element);
+
+			doc.Save(url);
+			return true;
+		}
+
+		/// <summary>
+		/// 在已有一条XmlElement上导出一条XmlData
+		/// </summary>
+		/// <param name="element"></param>
+		/// <param name="data"></param>
+		private static void ExportXmlData(XmlDocument doc, XmlElement element, XmlData data)
+		{
+			if (null != data.Attributes)
 			{
 				foreach (var attributePair in data.Attributes)
 					element.SetAttribute(attributePair.Key, attributePair.Value);
 			}
 
-			if(null != data.Childs)
+			if (null != data.Childs)
 			{
 				foreach (var childData in data.Childs)
 				{
-					XmlElement childElement = ExportData(doc, childData);
+					XmlElement childElement = AddXmlData(doc, childData);
 					element.AppendChild(childElement);
 				}
 			}
-			return element;
 		}
 #endif
+	}
+
+	public interface IXmlDataSerilizer
+	{
+		bool XmlSerilize(ref XmlData data);
+		bool XmlDeserilize(XmlData data);
 	}
 }

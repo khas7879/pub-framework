@@ -44,10 +44,23 @@ public partial class RuleEditor
 
 	public RuleMouseEventBase GetUpdateEvent(Event e)
 	{
-		if (null == mSelectedRule)
+		if (null == SelectedRuleObject)
 			return null;
 
-		if (null == e || e.button != 0)
+		if (null == e)
+			return null;
+
+		if (e.button == 1 && e.type == EventType.ContextClick)
+		{
+			var pTarget = SelectedRuleObject.TryGetExecuterAtPos(e.mousePosition);
+			if (null == pTarget)
+				return null;
+
+			RuleContextEvent ruleContextEvent = new RuleContextEvent(e.mousePosition, pTarget);
+			return ruleContextEvent;
+		}
+
+		if (e.button != 0)
 			return null;
 
 		if(mouseOverWindow != this)
@@ -161,6 +174,18 @@ public partial class RuleEditor
 		{
 			DownPos = downPos;
 			OutWindowPos = outWindowPos;
+			HandleTarget = target;
+		}
+	}
+
+	public class RuleContextEvent: RuleMouseEventBase
+	{
+		public readonly Vector2 Position;
+		public readonly IObjectBase HandleTarget;
+
+		public RuleContextEvent(Vector2 position, IObjectBase target)
+		{
+			Position = position;
 			HandleTarget = target;
 		}
 	}

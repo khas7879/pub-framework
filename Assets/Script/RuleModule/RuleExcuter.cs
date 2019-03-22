@@ -18,6 +18,11 @@ namespace CJC.Framework.Rule.Base
 			OnExecute(target);
 		}
 
+		public override bool XmlDeserilize(XmlData data)
+		{
+			return false;
+		}
+
 		public override void OnInit(CRule rule, XmlData data)
 		{
 			base.OnInit(rule, data);
@@ -65,12 +70,19 @@ namespace CJC.Framework.Rule.Base
 		// 包括 清除缓存 清除监听表等
 		public virtual void ClearCache(IModelData target) { }
 
-		public bool Export(XmlData data)
+		public override bool XmlSerilize(ref XmlData data)
 		{
+			data.SetNodeName(GetType());
+
 			ExportAttributes(data);
 			foreach (var route in RuleRoutes.Values)
-				if (!route.Export(data))
+			{
+				XmlData routeData = new XmlData();
+				if (!route.XmlSerilize(ref routeData))
 					return false;
+
+				data.AddChild(routeData);
+			}
 			return true;
 		}
 
@@ -86,7 +98,7 @@ namespace CJC.Framework.Rule.Base
 		}
 	}
 
-	public class RuleRoute
+	public class RuleRoute : IXmlDataSerilizer
 	{
 		private string RouteName;
 		public RuleExcuter Executer { get; private set; }
@@ -113,7 +125,7 @@ namespace CJC.Framework.Rule.Base
 			}
 		}
 
-		public bool Export(XmlData data)
+		public bool XmlSerilize(ref XmlData data)
 		{
 			if(Executer.IsMultiRoute)
 			{
@@ -124,10 +136,15 @@ namespace CJC.Framework.Rule.Base
 			}
 			foreach(var executer in NextExcuters)
 			{
-				if (!executer.Export(data))
+				if (!executer.XmlSerilize(ref data))
 					return false;
 			}
 			return true;
+		}
+
+		public bool XmlDeserilize(XmlData data)
+		{
+			throw new NotImplementedException();
 		}
 	}
 }

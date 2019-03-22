@@ -5,7 +5,7 @@ using CJC.Framework.Rule;
 
 namespace CJC.Framework.Rule.Base
 {
-	public class CRule
+	public class CRule: IXmlDataSerilizer
 	{
 		public int RuleID { get; private set; }
 		public readonly Dictionary<int, RuleExcuter> EnteranceExcuters; 
@@ -49,9 +49,29 @@ namespace CJC.Framework.Rule.Base
 				executer.DoExecute(target);
 			}
 		}
+
+		public bool XmlSerilize(ref XmlData data)
+		{
+			data.AddAttribute(ERuleKey.ID, RuleID);
+
+			foreach (var executer in EnteranceExcuters.Values)
+			{
+				XmlData executerData = new XmlData();
+				if (!executer.XmlSerilize(ref executerData))
+					return false;
+
+				data.AddChild(executerData);
+			}
+			return true;
+		}
+
+		public bool XmlDeserilize(XmlData data)
+		{
+			throw new NotImplementedException();
+		}
 	}
 
-	public abstract class CRuleBranch
+	public abstract class CRuleBranch: IXmlDataSerilizer
 	{
 		public CRule mRule;
 		public int RuleID { get { return mRule.RuleID; } }
@@ -61,5 +81,9 @@ namespace CJC.Framework.Rule.Base
 			mRule = rule;
 			BranchID = ToolParser.IntParse(data.GetAttribute(ERuleKey.ID));
 		}
+
+		public abstract bool XmlSerilize(ref XmlData data);
+
+		public abstract bool XmlDeserilize(XmlData data);
 	}
 }
